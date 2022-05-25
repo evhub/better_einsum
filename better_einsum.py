@@ -214,6 +214,7 @@ def better_einsum(expr, *given_operands, exec_mode=False, **kwargs):
 
     Supports:
     - better syntax ("C[i,k] = A[i,j] B[j,k]" instead of "ij, jk -> ik"),
+    - names and indices can be arbitrary variable names not just single letters,
     - keyword arguments (einsum("C = A[i] B[i]", A=..., B=...)),
     - warnings on common bugs (e.g. if the calling scope has a different value for a variable than was passed in),
     - a .exec method for executing the einsum assignment in the calling scope, and
@@ -283,24 +284,24 @@ if __name__ == "__main__":
     B = np.array([[5, 6], [7, 8]])
 
     # allowed syntaxes
-    assert einsum("C = A[i,j] B[i,j]", A, B) == 1*5 + 2*6 + 3*7 + 4*8
-    assert einsum("C[] = A[i,j] B[i,j]", A, B) == 1*5 + 2*6 + 3*7 + 4*8
-    assert einsum("C = _[i,j] _[i,j]", A, B) == 1*5 + 2*6 + 3*7 + 4*8
-    assert einsum("arrC = arrA[ind1,ind2] arrB[ind1,ind2]", A, B) == 1*5 + 2*6 + 3*7 + 4*8
-    assert einsum("C = A[i,j] * B[i,j]", A, B) == 1*5 + 2*6 + 3*7 + 4*8
-    assert einsum("C <- A[i,j] B[i,j]", A, B) == 1*5 + 2*6 + 3*7 + 4*8
-    assert einsum("A[i,j] B[i,j] -> C", A, B) == 1*5 + 2*6 + 3*7 + 4*8
+    assert einsum("C = A[i,j] B[i,j]", A, B) == np.sum(A * B)
+    assert einsum("C[] = A[i,j] B[i,j]", A, B) == np.sum(A * B)
+    assert einsum("_ = _[i,j] _[i,j]", A, B) == np.sum(A * B)
+    assert einsum("arrC = arrA[ind1,ind2] arrB[ind1,ind2]", A, B) == np.sum(A * B)
+    assert einsum("C = A[i,j] * B[i,j]", A, B) == np.sum(A * B)
+    assert einsum("C <- A[i,j] B[i,j]", A, B) == np.sum(A * B)
+    assert einsum("A[i,j] B[i,j] -> C", A, B) == np.sum(A * B)
 
     # most preferred form is with keyword arguments
-    assert einsum("C = A[i,j] B[i,j]", A=A, B=B) == 1*5 + 2*6 + 3*7 + 4*8
+    assert einsum("C = A[i,j] B[i,j]", A=A, B=B) == np.sum(A * B)
 
     # buggy; should show warnings
-    assert einsum("C = A[i,j] * A[i,j]", A, B) == 1*5 + 2*6 + 3*7 + 4*8
+    assert einsum("C = A[i,j] * A[i,j]", A, B) == np.sum(A * B)
 
     # exec test
     einsum.exec("C = A[i,j] B[i,j]")
-    assert C == 1*5 + 2*6 + 3*7 + 4*8
+    assert C == np.sum(A * B)
 
     # test other einsum forms
     assert (einsum("C[i,k] = A[i,j] * B[j,k]", A, B) == A.dot(B)).all()
-    assert (einsum("C[...] = A[i,...] B[i,...]", A, B) == A[0] * B[0] + A[1] * B[1]).all()
+    assert (einsum("C[...] = A[i,...] B[i,...]", A, B) == np.sum(A * B, axis=0)).all()
