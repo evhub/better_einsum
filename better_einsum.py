@@ -17,6 +17,7 @@ from collections import defaultdict
 from itertools import zip_longest
 from warnings import warn
 from functools import partial
+from contextlib import contextmanager
 
 import numpy as np
 from pyparsing import (
@@ -197,6 +198,16 @@ class BaseEinsum(object):
         """Set the base einsum function that better_einsum uses."""
         self.einsum = einsum
 
+    @contextmanager
+    def using_einsum_func(self, einsum):
+        """Context manager to set teh base einsum function for better_einsum."""
+        old_einsum = self.einsum
+        self.set_einsum_func(einsum)
+        try:
+            yield
+        finally:
+            self.set_einsum_func(old_einsum)
+
     def __call__(self, *args, **kwargs):
         return self.einsum(*args, **kwargs)
 
@@ -209,7 +220,7 @@ base_einsum = BaseEinsum(np.einsum)
 sentinel = object()
 
 
-def better_einsum(expr, *given_operands, exec_mode=False, **kwargs):
+def better_einsum(expr, *given_operands, base_einsum_func=base_einsum, exec_mode=False, **kwargs):
     """The main better_einsum function.
 
     Supports:
@@ -218,7 +229,7 @@ def better_einsum(expr, *given_operands, exec_mode=False, **kwargs):
     - keyword arguments (einsum("C = A[i] B[i]", A=..., B=...)),
     - warnings on common bugs (e.g. if the calling scope has a different value for a variable than was passed in),
     - a .exec method for executing the einsum assignment in the calling scope, and
-    - a .set_base_einsum_func method for using a different base einsum function than np.einsum.
+    - a `base_einsum_func` keyword argument for using a different base einsum function than `np.einsum`.
     """
     einsum_expr, assign_to_name, assign_from_names, index_name_table = EinsumGrammar.parse_einsum(expr)
 
@@ -261,7 +272,7 @@ def better_einsum(expr, *given_operands, exec_mode=False, **kwargs):
             variable_values[name] = operand
         operands.append(operand)
 
-    result = base_einsum(einsum_expr, *operands, **kwargs)
+    result = base_einsum_func(einsum_expr, *operands, **kwargs)
     if exec_mode and assign_to_name is not None:
         caller_locals[assign_to_name] = result
     return result
@@ -270,7 +281,9 @@ def better_einsum(expr, *given_operands, exec_mode=False, **kwargs):
 # Convenience aliases:
 
 einsum = better_einsum
-einsum.set_base_einsum_func = base_einsum.set_einsum_func
+einsum.set_default_einsum_func = base_einsum.set_einsum_func
+
+np_einsum = partial(einsum, base_einsum_func=np.einsum)
 
 exec_einsum = partial(einsum, exec_mode=True)
 einsum.exec = exec_einsum
@@ -291,6 +304,7 @@ if __name__ == "__main__":
     assert einsum("C = A[i,j] * B[i,j]", A, B) == np.sum(A * B)
     assert einsum("C <- A[i,j] B[i,j]", A, B) == np.sum(A * B)
     assert einsum("A[i,j] B[i,j] -> C", A, B) == np.sum(A * B)
+    assert np_einsum("C = A[i,j] * B[i,j]", A, B) == np.sum(A * B)
 
     # most preferred form is with keyword arguments
     assert einsum("C = A[i,j] B[i,j]", A=A, B=B) == np.sum(A * B)
