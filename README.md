@@ -1,13 +1,12 @@
 # `better_einsum`
 
-_`np.einsum` but better:_
+_[`np.einsum`](https://numpy.org/doc/stable/reference/generated/numpy.einsum.html) but better:_
 
 - better syntax (`"C[i,k] = A[i,j] B[j,k]"` instead of `"ij, jk -> ik"`),
 - names and indices can be arbitrary variable names not just single letters,
-- keyword arguments (`einsum("C = A[i] B[i]", A=..., B=...)`),
-- warnings on common bugs,
-- an `einsum.exec` method for executing the einsum assignment in the calling scope, and
-- a `base_einsum_func` keyword argument for using a different base einsum function than `np.einsum`.
+- support for keyword arguments (`einsum("C = A[i] B[i]", A=..., B=...)`),
+- warnings on common bugs, and
+- an `einsum.exec` method for executing the einsum assignment in the calling scope.
 
 `pip install better_einsum` then:
 
@@ -41,7 +40,7 @@ array([[ 7, 10],
 array([[19, 22],
        [43, 50]])
 
->>> einsum.exec("C[i,k] = A[i,j] * B[j,k]", A=A, B=B)  # directly assigns to C
+>>> einsum.exec("C[i,k] = A[i,j] * B[j,k]")  # directly assigns to C and looks up A and B
 array([[19, 22],
        [43, 50]])
 >>> C
