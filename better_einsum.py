@@ -1,5 +1,5 @@
 """
-The better einsum module.
+np.einsum but better
 
 Usage:
 
@@ -12,7 +12,7 @@ from __future__ import print_function, absolute_import, unicode_literals, divisi
 
 import re
 import inspect
-from string import ascii_letters
+import string
 from collections import defaultdict
 from itertools import zip_longest
 from warnings import warn
@@ -33,6 +33,12 @@ from pyparsing import (
     ParserElement,
     replaceWith,
 )
+
+
+# Pyparsing setup:
+
+ParserElement.enablePackrat(None)
+ParserElement.setDefaultWhitespaceChars(" \t\f\n")
 
 
 # Utilities:
@@ -84,7 +90,7 @@ class IndexTable(object):
 
     def get_new_var(self):
         """Get a new one-letter index name."""
-        return ascii_letters[len(self.table)]
+        return string.ascii_letters[len(self.table)]
 
     def __getitem__(self, index_name):
         # if index_name is an ellipsis, pass it through unchanged
