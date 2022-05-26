@@ -319,3 +319,4 @@ if __name__ == "__main__":
     # test other einsum forms
     assert (einsum("C[i,k] = A[i,j] * B[j,k]", A, B) == A.dot(B)).all()
     assert (einsum("C[...] = A[i,...] B[i,...]", A, B) == np.sum(A * B, axis=0)).all()
+    assert (einsum("C[...] = A[...,i] B[...,i]", A, B) == np.sum(A * B, axis=-1)).all()
