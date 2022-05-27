@@ -5,7 +5,7 @@ import setuptools
 
 setuptools.setup(
     name="better_einsum",
-    version="1.0.2",
+    version="1.0.3",
     description="np.einsum but better",
     url="https://github.com/evhub/better_einsum",
     author="Evan Hubinger",

@@ -37,7 +37,7 @@ from pyparsing import (
 
 # Pyparsing setup:
 
-ParserElement.enablePackrat(None)
+ParserElement.enablePackrat()
 ParserElement.setDefaultWhitespaceChars(" \t\f\n")
 
 
