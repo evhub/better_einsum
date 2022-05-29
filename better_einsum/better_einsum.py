@@ -10,6 +10,7 @@ Usage:
 
 from __future__ import print_function, absolute_import, unicode_literals, division
 
+import typing
 import re
 import inspect
 import string
@@ -20,7 +21,8 @@ from functools import partial
 from contextlib import contextmanager
 
 import numpy as np
-from pyparsing import (
+from numpy import typing as npt
+from pyparsing import (  # type: ignore
     Literal,
     Regex,
     OneOrMore,
@@ -43,6 +45,9 @@ ParserElement.setDefaultWhitespaceChars(" \t\f\n")
 
 # Utilities:
 
+DType = typing.TypeVar("DType", bound=np.generic)
+
+
 def attach(item, action, make_copy=True):
     """Add a parse action to the given item."""
     if make_copy:
@@ -59,13 +64,20 @@ def regex_item(regex, options=None):
     return Regex(regex, options)
 
 
-def tokenlist(item, sep, suppress=True, allow_trailing=True, at_least_two=False):
+def tokenlist(item, sep, suppress=True, allow_trailing=True, at_least_two=False, require_sep=False):
     """Create a list of tokens matching the item."""
     if suppress:
         sep = sep.suppress()
-    out = item + (OneOrMore if at_least_two else ZeroOrMore)(sep + item)
-    if allow_trailing:
-        out += Optional(sep)
+    if not require_sep:
+        out = item + (OneOrMore if at_least_two else ZeroOrMore)(sep + item)
+        if allow_trailing:
+            out += Optional(sep)
+    elif not allow_trailing:
+        out = item + OneOrMore(sep + item)
+    elif at_least_two:
+        out = item + OneOrMore(sep + item) + Optional(sep)
+    else:
+        out = OneOrMore(item + sep) + Optional(item)
     return out
 
 
@@ -226,7 +238,13 @@ base_einsum = BaseEinsum(np.einsum)
 sentinel = object()
 
 
-def better_einsum(expr, *given_operands, base_einsum_func=base_einsum, exec_mode=False, **kwargs):
+def better_einsum(
+    expr: str,
+    *given_operands: npt.NDArray[DType],
+    base_einsum_func: typing.Callable[..., npt.NDArray] = base_einsum,
+    exec_mode: bool = False,
+    **kwargs,
+) -> npt.NDArray[DType]:
     """The main better_einsum function.
 
     Supports:
@@ -239,10 +257,10 @@ def better_einsum(expr, *given_operands, base_einsum_func=base_einsum, exec_mode
     """
     einsum_expr, assign_to_name, assign_from_names, index_name_table = EinsumGrammar.parse_einsum(expr)
 
-    caller_locals = inspect.currentframe().f_back.f_locals
+    caller_locals = inspect.currentframe().f_back.f_locals  # type: ignore
 
     operands = []
-    variable_values = {}
+    variable_values: typing.Dict[str, typing.Any] = {}
     for name, given_operand in zip_longest(assign_from_names, given_operands, fillvalue=sentinel):
         if name is sentinel:
             raise TypeError("better_einsum received more operands than variables")
@@ -250,9 +268,9 @@ def better_einsum(expr, *given_operands, base_einsum_func=base_einsum, exec_mode
         kwargs_operand = kwargs.pop(name, sentinel)
         if kwargs_operand is not sentinel and given_operand is not sentinel:
             raise NameError(f"better_einsum got positional and keyword argument for variable: {name!r}")
-
         if given_operand is sentinel:
             given_operand = kwargs_operand
+
         found_operand = caller_locals.get(name, sentinel)
 
         if given_operand is sentinel and found_operand is sentinel:
@@ -287,12 +305,12 @@ def better_einsum(expr, *given_operands, base_einsum_func=base_einsum, exec_mode
 # Convenience aliases:
 
 einsum = better_einsum
-einsum.set_default_einsum_func = base_einsum.set_einsum_func
+einsum.set_default_einsum_func = base_einsum.set_einsum_func  # type: ignore
 
 np_einsum = partial(einsum, base_einsum_func=np.einsum)
 
 exec_einsum = partial(einsum, exec_mode=True)
-einsum.exec = exec_einsum
+einsum.exec = exec_einsum  # type: ignore
 
 
 # Tests:
@@ -319,8 +337,8 @@ if __name__ == "__main__":
     assert einsum("C = A[i,j] * A[i,j]", A, B) == np.sum(A * B)
 
     # exec test
-    einsum.exec("C = A[i,j] B[i,j]")
-    assert C == np.sum(A * B)
+    einsum.exec("C = A[i,j] B[i,j]")  # type: ignore
+    assert C == np.sum(A * B)  # type: ignore
 
     # test other einsum forms
     assert (einsum("C[i,k] = A[i,j] * B[j,k]", A, B) == A.dot(B)).all()

@@ -1,6 +1,6 @@
 .PHONY: test
 test: install
-	python3 -m better_einsum
+	python3 -m better_einsum.better_einsum
 
 .PHONY: setup
 setup:
