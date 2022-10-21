@@ -4,7 +4,7 @@ test: install
 
 .PHONY: setup
 setup:
-	python3 -m pip install -U setuptools pip
+	python3 -m pip install -U setuptools pip wheel
 
 .PHONY: install
 install: setup
