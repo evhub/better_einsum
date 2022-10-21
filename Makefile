@@ -18,8 +18,11 @@ clean:
 	-find . -name "__pycache__" -delete
 	-C:/GnuWin32/bin/find.exe . -name "__pycache__" -delete
 
-.PHONY: upload
-upload: clean test
+.PHONY: build
+build:
 	python3 setup.py sdist bdist_wheel
+
+.PHONY: upload
+upload: clean test build
 	python3 -m pip install -U --ignore-installed twine
 	twine upload dist/*
